@@ -11,7 +11,6 @@ vv DEBUG BARS vv
 
 CODE INBETWEEN THOSE BARS ARE FOR TESTING
 - EXACT SIZE FOR EASY SEARCHING!
-
 =end
 
 class Numeric
@@ -44,16 +43,17 @@ end
 class SlayTheLich
   attr_gtk
 
-  def initialize
-    @mode = :normal # :jujule
-  end
-
   class Primitive
     attr_accessor :x, :y, :r, :g, :b, :a
 
-    def initialize(x: 0, y: 0, r: 255, g: 255, b: 255, a: 255, **hash)
-      @x, @y, @r, @g, @b, @a = x, y, r, g, b, a
-      hash.each do |name, val|
+    def initialize(x: 0, y: 0, r: 255, g: 255, b: 255, a: 255, **kw)
+      @x = x
+      @y = y
+      @r = r
+      @g = g
+      @b = b
+      @a = a
+      kw.each do |name, val|
         singleton_class.class_eval { attr_accessor "#{name}" }
         send("#{name}=", val)
       end
@@ -61,23 +61,21 @@ class SlayTheLich
   end
 
   class Solid < Primitive
-    def initialize(w: 0, h: 0, **hash)
-      super(w: w, h: h, r: 0, g: 0, b: 0, **hash,
-            primitive_marker: :solid)
+    def initialize(w: 0, h: 0, **kw)
+      super(primitive_marker: :solid, w: w, h: h, r: 0, g: 0, b: 0, **kw)
     end
   end
 
   class Label < Primitive
-    def initialize(text: '', s_e: 16, a_e: 1, font: 'fonts/lowrez.ttf', **hash)
-      super(text: text, size_enum: s_e, alignment_enum: a_e, font: font, **hash,
-            primitive_marker: :label)
+    def initialize(text: '', s_e: 16, a_e: 1, font: 'fonts/lowrez.ttf', **kw)
+      super(primitive_marker: :label,
+            text: text, size_enum: s_e, alignment_enum: a_e, font: font, **kw)
     end
   end
 
   class Sprite < Primitive
-    def initialize(w: 0, h: 0, path: '', **hash)
-      super(w: w, h: h, path: path, **hash,
-            primitive_marker: :sprite)
+    def initialize(path:, w: 0, h: 0, **kw)
+      super(primitive_marker: :sprite, w: w, h: h, path: path, **kw)
     end
 
     def draw_override(ffi_draw)
@@ -92,29 +90,45 @@ class SlayTheLich
     end
   end
 
-  def font name
+  def font(name)
     "fonts/#{name}.ttf"
   end
 
-  def png name
+  def png(name)
     "sprites/slaythelich/#{name}.png"
   end
 
-  def wav name
+  def wav(name)
     "sounds/#{name}.wav"
   end
 
-  def ogg name
+  def ogg(name)
     "sounds/#{name}.ogg"
+  end
+
+  def new_combo(size)
+    (1..size).map { 4.randomize(:int) }
+ end
+
+  def unlock(combo, key)
+    combo.shift if combo[0] == key
+  end
+
+  def combo_to_str(combo)
+    combo.map { |i| %w[→ ↑ ← ↓][i] }[0..5].join(' ')
+  end
+
+  def initialize
+    @mode = :normal # or :jujule
   end
 
   def defaults
     outputs.clear
 
-    @bg_color = [0, 0, 0]
-
     @scale_x = 105 / 32
     @scale_y = 45 / 14
+
+    @bg_color = [0, 0, 0]
 
     @start_at = nil
     @game_at  = nil
@@ -124,7 +138,13 @@ class SlayTheLich
 
     @time = 20.seconds
 
-    @n_orbs = @mode == :jujule ? 20 : 10
+    @n_orbs = 
+      case @mode
+      when :jujule
+        13
+      else
+        10
+      end
 
     #| STATICS << |#============================================#| STATICS << |#
     @timer_bar = Solid.new(w: 1280, r: 21, g: 9, b: 29)
@@ -144,14 +164,19 @@ class SlayTheLich
                         init_tick: 0)
 
     @box = Label.new(x: 640, y: 160, text: '[ ]', font: nil)
-    combo = new_combo(1)
-    @lock = Label.new(x: 615, y: 160,
-      text: combo_to_str(combo),
-      a_e: 0, font: nil,
-      combo: combo)
+
+    @lock = new_combo(1).then do |combo|
+      Label.new(x: 615, y: 160,
+                text: combo_to_str(combo),
+                a_e: 0, font: nil,
+                combo: combo)
+    end
+
     @timer = Label.new(x: 640, y: 48, text: 'PRESS ARROW')
     @timer.text = 'Jujule Mode: Good Luck' if @mode == :jujule
+
     @end_text = Label.new(x: 640, y: 550, a: 0)
+
     @play_again = Label.new(x: 640, y: 48, text: 'PRESS ARROW', a: 0)
 
     @reset_solid = Solid.new(w: 1280, h: 720)
@@ -162,6 +187,7 @@ class SlayTheLich
       @box, @lock, @timer, @end_text, @play_again, @reset_solid
     ]
     #| STATICS << |#============================================#| STATICS << |#
+
     @void = Solid.new(h: 720)
 
     @lich = Sprite.new(x: 640 - 128 * @scale_x / 2,
@@ -185,25 +211,9 @@ class SlayTheLich
     @orb_exps = [] # sprites: x, y, w, h, path, init_tick, live, z
   end
 
-  def new_combo(size)
-    (1..size).map { 4.randomize(:int) }
-  end
-
-  def unlock(combo, key)
-    combo.shift if combo[0] == key
-  end
-
-  def combo_to_str(combo)
-    combo.map { |i| ['→', '↑', '←', '↓'][i] }[0..5]
-         .join(' ')
-  end
-
   def tick
     key_down = inputs::keyboard::key_down
-    key_presses = [
-      :right, :up, :left, :down,
-      :d, :w, :a, :s
-    ].map { |k| key_down.send k }
+    key_presses = %i[right up left down d w a s].map { |k| key_down.send k }
     key = key_presses.index(&:itself)
     key %= 4 if key
 
@@ -214,21 +224,19 @@ class SlayTheLich
 
     case @state
     when :start
-      @reset_solid.a = 255 * 0.ease(0.5.seconds, [:identity, :flip])
-
-      if key_down.j
-        @mode = :jujule
-        @state = :reset
+      if 0.elapsed?(0.5.seconds)
+        if key_down.j
+          @mode = :jujule
+          @state = :reset
+        elsif unlock(@lock.combo, key)
+          gtk.stop_music()
+          @state = :game
+        end
       end
-
-      if 0.elapsed?(0.5.seconds) && unlock(@lock.combo, key)
-        gtk.stop_music()
-        outputs.sounds << ogg('slaythelich')
-
-        @state = :game
-      end
+      @reset_solid.a = 255 * 0.ease(0.5.seconds, %i[identity flip])
 
     when :game
+      outputs.sounds << ogg('slaythelich') unless @game_at
       @game_at ||= args.tick_count
 
       @lock.text = combo_to_str(@lock.combo) if unlock(@lock.combo, key)
@@ -242,20 +250,21 @@ class SlayTheLich
           @lock.text = combo_to_str(@lock.combo)
         end
 
-        orb = @orbs.pop
-        @orb_exps << Sprite.new(x: orb.x,
-                                y: orb.y,
-                                w: 32 * @scale_x,
-                                h: 32 * @scale_y,
-                                path: png('orb_exp_0'),
-                                init_tick: args.tick_count,
-                                live: true,
-                                z: orb.z)
-
         @slash.live = true
         @slash.init_tick = args.tick_count
 
-        outputs.sounds << wav('slash') if !@orbs.empty?
+        @orbs.pop.tap do |orb|
+          @orb_exps << Sprite.new(x: orb.x,
+                                  y: orb.y,
+                                  w: 32 * @scale_x,
+                                  h: 32 * @scale_y,
+                                  path: png('orb_exp_0'),
+                                  init_tick: args.tick_count,
+                                  live: true,
+                                  z: orb.z)
+        end
+
+        outputs.sounds << wav('slash') unless @orbs.empty?
       end
 
       if @orbs.empty?
@@ -284,35 +293,36 @@ class SlayTheLich
         @timer.text = "%05.2f" % (@time / 60)
       end
 
-      linear_ease = @game_at.ease(20.seconds, [:identity])
-      smooth_ease = @game_at.ease(20.seconds, [:quad, :quad])
+      linear_ease = @game_at.ease(20.seconds, :identity)
+      smooth_ease = @game_at.ease(20.seconds, %i[quad quad])
       shake_value = 15 * smooth_ease * Math.sin(args.tick_count / 2)
 
       @void.w = 20 * linear_ease + shake_value
       @void.x = 640 - @void.w / 2
 
     when :win
+      outputs.sounds << wav('lichdeath') unless @win_at
       @win_at ||= args.tick_count
-      @tmp ||= args.tick_count
 
-      if @win_at.elapsed? 7.5.seconds
+      outputs.sounds << wav('win') if @win_at + 4.5.seconds == args.tick_count
+
+      if @win_at.elapsed?(7.5.seconds)
         @state = :reset if key
-      elsif @win_at.elapsed? 4.5.seconds
-        smooth_ease = (@win_at + 4.5.seconds).ease(3.seconds, [:quad, :quad, :quad])
+      elsif @win_at.elapsed?(4.5.seconds)
+        smooth_ease = (@win_at + 4.5.seconds).ease(3.seconds, %i[quad quad quad])
 
         @timer.y = 48 + 360 * smooth_ease
         @end_text.a = 255 * smooth_ease
         @play_again.a = 255 * smooth_ease
       else
-        smooth_ease = @win_at.ease(4.5.seconds, [:quad, :quad, :quad, :flip])
-        linear_ease = @win_at.ease(4.5.seconds, [:identity, :flip])
+        smooth_ease = @win_at.ease(4.5.seconds, %i[quad quad quad flip])
+        linear_ease = @win_at.ease(4.5.seconds, %i[identity flip])
         shake_value = 15 * smooth_ease * Math.sin(args.tick_count / 2)
 
         @lich.g = 0
         @lich.a = 255 * linear_ease * @win_at.frame_index(2, 2, true)
 
-        if @tmp.elapsed?(0.2.seconds)
-          @tmp = args.tick_count
+        if (args.tick_count - @win_at) % 0.2.seconds == 0
           @orb_exps << Sprite.new(x: 640 - 96 * @scale_x / 2 + (64 * @scale_x).randomize(:int),
                                   y: 168 + (64 * @scale_y).randomize(:int),
                                   w: 32 * @scale_x,
@@ -324,41 +334,32 @@ class SlayTheLich
         end
       end
 
-      outputs.sounds << wav('win') if @win_at + 4.5.seconds == args.tick_count
-      outputs.sounds << wav('lichdeath') if @win_at + 5 == args.tick_count
-
     when :lose
+      outputs.sounds << wav('lose') unless @lose_at
       @lose_at ||= args.tick_count
 
       @void.r = 10 + floating_shift
 
-      if @lose_at.elapsed? 2.seconds
+      if @lose_at.elapsed?(2.seconds)
         @state = :reset if key
-      elsif @lose_at.elapsed? 1.seconds
-        ease = (@lose_at + 1.seconds).ease(1.seconds, [:quad, :quad, :quad])
-        ease_2 = (@lose_at + 1.seconds).ease(1.seconds, [:quad, :quad, :quad, :flip])
+      elsif @lose_at.elapsed?(1.seconds)
+        ease = (@lose_at + 1.seconds).ease(1.seconds, %i[quad quad quad])
         @end_text.a = 255 * ease
         @play_again.a = 255 * ease
-        @timer.a = 255 * ease_2
+        @timer.a = 255 * (1 - ease)
       else
-        linear_ease = 1
-        shake_value = 15 * Math.sin(args.tick_count / 2)
-
-        @void.w = 20 + 1260 * @lose_at.ease(1.seconds, [:identity])
+        @void.w = 20 + 1260 * @lose_at.ease(1.seconds, :identity)
         @void.x = 640 - @void.w / 2
       end
 
-      outputs.sounds << wav('lose') if @lose_at + 5 == args.tick_count
-
     when :reset
       @reset_at ||= args.tick_count
-      @reset_solid.a = 255 * @reset_at.ease(0.5.seconds, [:identity])
+      @reset_solid.a = 255 * @reset_at.ease(0.5.seconds, :identity)
       @state = :setup if @reset_at.elapsed?(0.5.seconds)
 
     else
-      defaults()
       outputs.sounds << ogg('waiting')
-
+      defaults()
       @state = :start
     end
 
@@ -373,13 +374,14 @@ class SlayTheLich
     @lich.path = png("lich_#{0.frame_index(2, 0.2.seconds, true)}")
 
     @orbs.each do |orb|
-      x = Math.cos(orb.init_t + args.tick_count / 32)
-      y = Math.sin(orb.init_t + args.tick_count / 32)
+      t = orb.init_t + args.tick_count / 32
+      x = Math.cos(t)
+      y = Math.sin(t)
       shift_x = 200 * x
       shift_y = 50 * y * y * y + floating_shift
 
-      frame = (0.frame_index(5, 0.2.seconds, true) + orb.init_frame) % 5
-      orb.x = (640 - 32 * @scale_x / 2) + shift_x
+      frame = (orb.init_frame + 0.frame_index(5, 0.2.seconds, true)) % 5
+      orb.x = 640 - 32 * @scale_x / 2 + shift_x
       orb.y = 250 + shift_y
       orb.path = png("orb_#{frame}")
       orb.z = 0 <=> y
@@ -387,7 +389,7 @@ class SlayTheLich
 
     flag = false
     @orb_exps.each do |exp|
-      if frame = exp.init_tick.frame_index(5, 0.1.seconds, false)
+      if (frame = exp.init_tick.frame_index(5, 0.1.seconds, false))
         exp.path = png("orb_exp_#{frame}")
       else
         exp.live = false
@@ -397,8 +399,7 @@ class SlayTheLich
     @orb_exps.select!(&:live) if flag
 
     if @slash.live
-      frame = @slash.init_tick.frame_index(4, 0.05.seconds, false)
-      if frame
+      if (frame = @slash.init_tick.frame_index(4, 0.05.seconds, false))
         @slash.x = 640 - 128 * @scale_x / 2 + shake_value
         @slash.path = png("slash_#{frame}")
         @slash.a = 255
@@ -415,8 +416,7 @@ class SlayTheLich
     end
 
     outputs.background_color = @bg_color
-    outputs.primitives << @void
-    outputs.primitives << [
+    outputs.primitives << [@void] + [
       @lich, *@orbs, *@orb_exps
     ].sort { |a, b| a.z <=> b.z }
   end
