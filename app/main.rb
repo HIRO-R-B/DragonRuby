@@ -4,13 +4,6 @@ Slay The Lich
   The hero must kill the Lich King in 20 seconds before he ends the world
   Use the arrow keys (←↑→↓) [or dpad] to break the barriers guarding the lich
   and strike the final blow
-
-vv DEBUG BARS vv
-#| DEBUG << |#===============# [Place notes here]
-#| DEBUG >> |#===============# [Notes!]
-
-CODE INBETWEEN THOSE BARS ARE FOR TESTING
-- EXACT SIZE FOR EASY SEARCHING!
 =end
 
 class Numeric
@@ -43,6 +36,8 @@ end
 class SlayTheLich
   attr_gtk
 
+  # Dont particularly need these classes
+  # Just makes primitives a little faster / shorter to define
   class Primitive
     attr_accessor :x, :y, :r, :g, :b, :a
 
@@ -90,6 +85,7 @@ class SlayTheLich
     end
   end
 
+  # Give paths for files
   def font(name)
     "fonts/#{name}.ttf"
   end
@@ -106,54 +102,58 @@ class SlayTheLich
     "sounds/#{name}.ogg"
   end
 
-  def new_combo(size)
+  def new_combo(size) # Create array of ints, repesents → ↑ ← ↓ etc.
     (1..size).map { 4.randomize(:int) }
- end
+  end
 
-  def unlock(combo, key)
+  def unlock(combo, key) # Pop first int if it matches
     combo.shift if combo[0] == key
   end
 
-  def combo_to_str(combo)
+  def combo_to_str(combo) # Array ints to combo text
     combo.map { |i| %w[→ ↑ ← ↓][i] }[0..5].join(' ')
   end
 
-  def initialize
-    @mode = :normal # or :jujule
+  def initialize # Default mode
+    @mode = :normal
+    #       :jujule
   end
 
   def defaults
     outputs.clear
 
-    @scale_x = 105 / 32
+    @scale_x = 105 / 32 # Scales to an SNES kind of resolution
     @scale_y = 45 / 14
 
-    @bg_color = [0, 0, 0]
+    @bg_color = [0, 0, 0] # Black
 
-    @start_at = nil
+    @start_at = nil # Starting ticks of game sections
     @game_at  = nil
     @win_at   = nil
     @lose_at  = nil
     @reset_at = nil
 
-    @time = 20.seconds
+    @time = 20.seconds # Countdown time
 
-    @n_orbs = 
+    @n_orbs = # number of combos to win
       case @mode
       when :jujule
-        13
+        14
       else
         10
       end
 
     #| STATICS << |#============================================#| STATICS << |#
+    # Purple bars on side
     @timer_bar = Solid.new(w: 1280, r: 21, g: 9, b: 29)
 
+    # Mountain background
     @background = Sprite.new(x: 640 - 256 * @scale_x / 2,
                              w: 256 * @scale_x,
                              h: 224 * @scale_y,
                              path: png('bg_0'))
 
+    # Slash sprite
     @slash = Sprite.new(x: 640 - 128 * @scale_x / 2,
                         y: 168,
                         w: 128 * @scale_x,
@@ -163,8 +163,11 @@ class SlayTheLich
                         live: false,
                         init_tick: 0)
 
+    # Labels
+    # Box around arrow text => [→] ↑ ← ↓
     @box = Label.new(x: 640, y: 160, text: '[ ]', font: nil)
 
+    # Arrow text / keeps track of combo
     @lock = new_combo(1).then do |combo|
       Label.new(x: 615, y: 160,
                 text: combo_to_str(combo),
@@ -179,6 +182,7 @@ class SlayTheLich
 
     @play_again = Label.new(x: 640, y: 48, text: 'PRESS ARROW', a: 0)
 
+    # Fades in/out solid at start/reset of game
     @reset_solid = Solid.new(w: 1280, h: 720)
 
     outputs.static_solids << @timer_bar
@@ -188,7 +192,7 @@ class SlayTheLich
     ]
     #| STATICS << |#============================================#| STATICS << |#
 
-    @void = Solid.new(h: 720)
+    @void = Solid.new(h: 720) # THE ALL CONSUMING VOID
 
     @lich = Sprite.new(x: 640 - 128 * @scale_x / 2,
                        y: 168,
@@ -208,16 +212,17 @@ class SlayTheLich
                  z: 0)
     end.shuffle!
 
+    # Explosions
     @orb_exps = [] # sprites: x, y, w, h, path, init_tick, live, z
   end
 
-  def tick
+  def tick # Where the magic happens (gameplay logic)
     key_down = inputs::keyboard::key_down
     key_presses = %i[right up left down d w a s].map { |k| key_down.send k }
-    key = key_presses.index(&:itself)
-    key %= 4 if key
+    key = key_presses.index(&:itself) # Get first key pressed, if any
+    key %= 4 if key # Account for wasd keypresses
 
-    linear_ease = 0
+    linear_ease = 0 # Eases for sprite movements
     smooth_ease = 0
     shake_value = 0
     floating_shift = 5 * Math.sin(args.tick_count / 8)
@@ -225,7 +230,7 @@ class SlayTheLich
     case @state
     when :start
       if 0.elapsed?(0.5.seconds)
-        if key_down.j
+        if key_down.j # Secret mode change!
           @mode = :jujule
           @state = :reset
         elsif unlock(@lock.combo, key)
@@ -240,7 +245,7 @@ class SlayTheLich
       @game_at ||= args.tick_count
 
       @lock.text = combo_to_str(@lock.combo) if unlock(@lock.combo, key)
-      if @lock.combo.empty?
+      if @lock.combo.empty? # Change out combo
         if @mode == :jujule
           @lock.oldcombo << 4.randomize(:int)
           @lock.combo = [*@lock.oldcombo]
@@ -250,10 +255,10 @@ class SlayTheLich
           @lock.text = combo_to_str(@lock.combo)
         end
 
-        @slash.live = true
+        @slash.live = true # Activate slash animation
         @slash.init_tick = args.tick_count
 
-        @orbs.pop.tap do |orb|
+        @orbs.pop.tap do |orb| # Kill an orb / Add explosion
           @orb_exps << Sprite.new(x: orb.x,
                                   y: orb.y,
                                   w: 32 * @scale_x,
@@ -267,22 +272,20 @@ class SlayTheLich
         outputs.sounds << wav('slash') unless @orbs.empty?
       end
 
-      if @orbs.empty?
+      if @orbs.empty? # You won
         @end_text.text = 'LICH SLAIN'
-
-        @box.a = 0
+        @box.a = 0 # Combos disappear
         @lock.a = 0
-        @void.a = 0
+        @void.a = 0 # Void disappears
 
         gtk.stop_music()
 
         @state = :win
       end
 
-      if @time == 0
+      if @time == 0 # You lose
         @end_text.text = 'THE WORLD IS GONE'
-
-        @box.a = 0
+        @box.a = 0 # Combos disappear
         @lock.a = 0
 
         gtk.stop_music()
@@ -297,8 +300,8 @@ class SlayTheLich
       smooth_ease = @game_at.ease(20.seconds, %i[quad quad])
       shake_value = 15 * smooth_ease * Math.sin(args.tick_count / 2)
 
-      @void.w = 20 * linear_ease + shake_value
-      @void.x = 640 - @void.w / 2
+      @void.w = 20 * linear_ease + shake_value # Shake / Expand
+      @void.x = 640 - @void.w / 2 # Center
 
     when :win
       outputs.sounds << wav('lichdeath') unless @win_at
@@ -311,19 +314,21 @@ class SlayTheLich
       elsif @win_at.elapsed?(4.5.seconds)
         smooth_ease = (@win_at + 4.5.seconds).ease(3.seconds, %i[quad quad quad])
 
-        @timer.y = 48 + 360 * smooth_ease
-        @end_text.a = 255 * smooth_ease
+        @timer.y = 48 + 360 * smooth_ease # Move timer up
+        @end_text.a = 255 * smooth_ease # Make visible
         @play_again.a = 255 * smooth_ease
       else
         smooth_ease = @win_at.ease(4.5.seconds, %i[quad quad quad flip])
         linear_ease = @win_at.ease(4.5.seconds, %i[identity flip])
         shake_value = 15 * smooth_ease * Math.sin(args.tick_count / 2)
 
-        @lich.g = 0
+        @lich.g = 0 # Lich flickers in reddish hue
         @lich.a = 255 * linear_ease * @win_at.frame_index(2, 2, true)
 
+        # Spam explosions
         if (args.tick_count - @win_at) % 0.2.seconds == 0
-          @orb_exps << Sprite.new(x: 640 - 96 * @scale_x / 2 + (64 * @scale_x).randomize(:int),
+          @orb_exps << Sprite.new(x: 640 - 96 * @scale_x / 2
+                                     + (64 * @scale_x).randomize(:int),
                                   y: 168 + (64 * @scale_y).randomize(:int),
                                   w: 32 * @scale_x,
                                   h: 32 * @scale_y,
@@ -338,42 +343,45 @@ class SlayTheLich
       outputs.sounds << wav('lose') unless @lose_at
       @lose_at ||= args.tick_count
 
-      @void.r = 10 + floating_shift
+      @void.r = 10 + floating_shift # Void pulses with lich
 
       if @lose_at.elapsed?(2.seconds)
         @state = :reset if key
       elsif @lose_at.elapsed?(1.seconds)
         ease = (@lose_at + 1.seconds).ease(1.seconds, %i[quad quad quad])
-        @end_text.a = 255 * ease
+        @end_text.a = 255 * ease # Make text visible
         @play_again.a = 255 * ease
-        @timer.a = 255 * (1 - ease)
-      else
+        @timer.a = 255 * (1 - ease) # Invisible here
+      else # Cover screen with void
         @void.w = 20 + 1260 * @lose_at.ease(1.seconds, :identity)
         @void.x = 640 - @void.w / 2
       end
 
-    when :reset
+    when :reset # Fade out
       @reset_at ||= args.tick_count
       @reset_solid.a = 255 * @reset_at.ease(0.5.seconds, :identity)
       @state = :setup if @reset_at.elapsed?(0.5.seconds)
 
-    else
+    else # Reset all variables
       outputs.sounds << ogg('waiting')
       defaults()
       @state = :start
     end
 
+    # Bar grows upward / more saturated during countdown
     @timer_bar.h = 720 * (1 - @time / 20.seconds)
     @timer_bar.r = 21 + 50 * linear_ease
     @timer_bar.b = 29 + 50 * linear_ease
 
+    # Shake / Animate
     @background.x = 220 + shake_value
     @background.path = png("bg_#{0.frame_index(4, 0.5.seconds, true)}")
 
+    # Floating touches / Animate
     @lich.y = 168 + floating_shift
     @lich.path = png("lich_#{0.frame_index(2, 0.2.seconds, true)}")
 
-    @orbs.each do |orb|
+    @orbs.each do |orb| # Make orbs circle lich
       t = orb.init_t + args.tick_count / 32
       x = Math.cos(t)
       y = Math.sin(t)
@@ -388,7 +396,7 @@ class SlayTheLich
     end
 
     flag = false
-    @orb_exps.each do |exp|
+    @orb_exps.each do |exp| # Animate / kill off explosions
       if (frame = exp.init_tick.frame_index(5, 0.1.seconds, false))
         exp.path = png("orb_exp_#{frame}")
       else
@@ -396,15 +404,15 @@ class SlayTheLich
         flag = true
       end
     end
-    @orb_exps.select!(&:live) if flag
+    @orb_exps.select!(&:live) if flag # Remove the dead
 
-    if @slash.live
+    if @slash.live # Animate slash
       if (frame = @slash.init_tick.frame_index(4, 0.05.seconds, false))
         @slash.x = 640 - 128 * @scale_x / 2 + shake_value
         @slash.path = png("slash_#{frame}")
         @slash.a = 255
 
-        @lich.g = 0
+        @lich.g = 0 # Flicker lich in red
         @lich.a = 255 * @slash.init_tick.frame_index(2, 2, true)
       else
         @slash.live = false
@@ -415,9 +423,9 @@ class SlayTheLich
       end
     end
 
-    outputs.background_color = @bg_color
+    outputs.background_color = @bg_color # Black bg
     outputs.primitives << [@void] + [
-      @lich, *@orbs, *@orb_exps
+      @lich, *@orbs, *@orb_exps # Sorted sprites
     ].sort { |a, b| a.z <=> b.z }
   end
 end
