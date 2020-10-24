@@ -27,3 +27,4 @@ Detect whether caps lock or num lock is activated with `keyboard.caps_lock?` and
 keyboard.only? key, keys
   # Check if key is the only pressed key in keys
 ```
+![Image](shot-2020-10-24_07-53-23.jpg)
