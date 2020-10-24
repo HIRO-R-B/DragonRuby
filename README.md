@@ -1,6 +1,6 @@
 # Extra Keys
 Makes a couple of edits to inputs to add extra keys and convenient methods.
-  (Shouldn't break anything)
+  (Shouldn't break anything, I think)
 
 ## How to?
 Put [`extra_keys.rb`](extra_keys.rb) somewhere and require it!
