@@ -27,7 +27,7 @@ Detect whether caps lock or num lock is activated with `keyboard.caps_lock?` and
 keyboard.only? key, keys
   # Check if key is the only pressed key in keys
 
-key_(down/held/up).(Shift Letter)
+key_[down/held/up].[A-Z]
   # Check if key is pressed while shift is held
   # e.g. key_down.A
   #      key_held.B
