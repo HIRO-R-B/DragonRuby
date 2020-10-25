@@ -5,12 +5,8 @@ class Primitive
   attr_accessor :x, :y, :r, :g, :b, :a
 
   def initialize(x: 0, y: 0, r: 255, g: 255, b: 255, a: 255, **kw)
-    @x = x
-    @y = y
-    @r = r
-    @g = g
-    @b = b
-    @a = a
+    @x = x; @y = y;
+    @r = r; @g = g; @b = b; @a = a
     kw.each do |name, val|
       singleton_class.class_eval { attr_accessor "#{name}" }
       send("#{name}=", val)
@@ -20,7 +16,7 @@ end
 
 class Solid < Primitive
   def initialize(w: 0, h: 0, **kw)
-    super(primitive_marker: :solid, w: w, h: h, r: 0, g: 0, b: 0, **kw)
+    super(primitive_marker: :solid, w: w, h: h, **kw)
   end
 end
 
@@ -32,11 +28,11 @@ class Sprite < Primitive
   def draw_override(ffi_draw)
     ffi_draw.draw_sprite_3(@x, @y, @w, @h,
                            @path,
-                           nil,
+                           @angle,
                            @a, @r, @g, @b,
                            nil, nil,
                            nil, nil, nil, nil,
-                           nil, nil,
+                           @angle_anchor_x, @angle_anchor_y,
                            nil, nil, nil, nil)
   end
 end
@@ -51,7 +47,11 @@ class Hexagon
   end
 
   def self.rt
-    @rt ||= $gtk.args.render_target(rt_name()).solids << Solid.new(0, 0, 25, 25, 255, 255, 255, 255)
+    @rt ||= $gtk.args.render_target(rt_name()).tap do |target|
+      target.width = 25
+      target.height = 25
+      target.solids << Solid.new(w: 25, h: 25)
+    end
   end
 
   def initialize x, y, radius, r = 0, g = 0, b = 0, a = 127, angle = 0, opts = {}
@@ -61,7 +61,21 @@ class Hexagon
     @angle = angle
     @opts = opts
 
-    Hexagon.rt()
+    @sprites = 3.map_with_index do |n|
+      Sprite.new(
+        x: x - width / 2,
+        y: y - height / 2,
+        w: width,
+        h: height,
+        path: Hexagon.rt_name(),
+        angle: 60 * n + @angle,
+        r: @r,
+        g: @g,
+        b: @b,
+        a: @a,
+        angle_anchor_x: 0.5,
+        angle_anchor_y: 0.5)
+    end
   end
 
   def width
@@ -72,28 +86,29 @@ class Hexagon
     @height ||= @radius * Math.sqrt(3)
   end
 
-  def radius= radius
+  def radius radius
     @radius = radius
     @height = nil
     prepare_render_target
   end
 
-  def output
-    3.map_with_index do |n|
-      {x: x - width / 2,
-       y: y - height / 2,
-       w: 1280,
-       h: 720,
-       path: Hexagon.rt_name(),
-       angle: 60 * n + @angle,
-       r: @r,
-       g: @g,
-       b: @b,
-       a: @a,
-       angle_anchor_x: width / 2 / 1280.0,
-       angle_anchor_y: height / 2 / 720.0
-      }
+  def sprites
+    i = 0
+    while i < 3
+      s = @sprites[i]
+      s.x = @x - width / 2
+      s.y = @y - height / 2
+      s.w = width
+      s.h = height
+      s.angle = 60 * i + @angle
+      s.r = @r
+      s.g = @g
+      s.b = @b
+      s.a = @a
+
+      i += 1
     end
+    @sprites
   end
 end
 
@@ -101,6 +116,8 @@ class HexagonRotate
   attr_gtk
 
   def defaults
+    Hexagon.rt()
+
     state.tile_size       = 80
     state.tile_w          = Math.sqrt(3) * state.tile_size.half
     state.tile_h          = state.tile_size * 3/4
@@ -241,9 +258,7 @@ class HexagonRotate
   def render
     outputs.background_color = [0, 0, 0]
 
-    outputs.sprites << state.tiles.map do |t|
-      t.output
-    end
+    outputs.sprites << state.tiles.map { |t| t.sprites }
 
     # bg_tiles = state.tiles.select { |t| t[:a] == 127 }
     # bg_tiles.map do |t|
