@@ -1,4 +1,4 @@
 # Hexagons!
-Feel free to use and edit
+Feel free to use, edit, do whatever you want.
 
 ![gif](hexagon.gif)
