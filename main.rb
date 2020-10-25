@@ -23,7 +23,7 @@ class Hexagon
         w: state.tile_w,
         h: state.tile_h,
         type: :blank,
-        path: "sprites/hexagon-gray.png",
+        path: 2.randomize(:int) == 0 ? 'sprites/hexagon-gray.png' : 'sprites/hexagon-blue.png',
         a: 127,
         angle_anchor_x: 0.5,
         angle_anchor_y: 0.5
@@ -41,6 +41,7 @@ class Hexagon
     state.selected_tile = nil
     state.rotate_mode = false
     state.rotation = 0
+    state.snap_angles = (0..8).map { |i| i * 3.14/4 }
   end
 
   def input
@@ -49,7 +50,8 @@ class Hexagon
       if tile && tile[:a] == 127
         points = (0..7).map do |i|
           r = i*3.14/4
-          {x: tile[:center][:x] + 50 * Math.cos(r), y: tile[:center][:y] + 50 * Math.sin(r)}
+          { x: tile[:center].x + 50 * Math.cos(r),
+            y: tile[:center].y + 50 * Math.sin(r) }
         end
 
         tiles = state.tiles.select do |t|
@@ -71,17 +73,29 @@ class Hexagon
         tiles = state.tiles.select { |t| t[:a] == 255 }
 
         if tiles.any? { |t| p.point_inside_circle? t[:center], t[:radius] }
-          x = state.selected_tile[:center][:x]
-          y = state.selected_tile[:center][:y]
+          point = { x: state.selected_tile[:center].x,
+                    y: state.selected_tile[:center].y }
 
-          state.rotation = Math.atan2(p.y - y, p.x - x)
+          state.rotation = point.angle_to(p).to_radians
         end
       end
 
       if inputs.mouse.button_right
-        state.tiles.select { |t| t[:a] == 255 }.each { |t| t[:a] = 127; t[:angle] = 0 }
+        tiles = state.tiles.select { |t| t[:a] == 255 }
+        paths = tiles.map { |t| t[:path] }
+        paths = tiles.map_with_index  do |t, i|
+          point = { x: t.x + t[:w].half,
+                    y: t.y + t[:h].half }
+
+          tile = state.tiles.find { |tile| point.point_inside_circle?(tile[:center], tile[:radius] / 2) }
+
+          tile[:path] = paths[i]
+        end
+
+        tiles.each { |t| t[:a] = 127; t[:angle] = 0 }
 
         state.rotate_mode = false
+        state.rotation = 0
       end
     end
   end
@@ -132,14 +146,23 @@ class Hexagon
 
     outputs.sprites << bg_tiles
     outputs.sprites << fg_tiles
+
+    tiles = state.tiles.select { |t| t[:a] == 255 }
+    tiles.each do |t|
+      point = { x: t.x + t[:w].half,
+                y: t.y + t[:h].half }
+
+      tile = state.tiles.find { |tile| point.point_inside_circle?(tile[:center], tile[:radius]/2) }
+
+      outputs.primitives << [point.x, point.y, 10, 10].solid
+      outputs.primitives << [tile[:center].x, tile[:center].y, 10, 10, 255, 0, 0].solid if tile
+    end
   end
 end
 
 $game = Hexagon.new
-
 def tick args
   $game.args = args
   $game.tick
 end
-
 $gtk.reset
