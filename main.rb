@@ -1,5 +1,5 @@
 # Contributors: Hiro_r_b#7841
-#               mikemar10#9709
+# (Discord)     mikemar10#9709
 
 class HexagonRotate
   attr_gtk
