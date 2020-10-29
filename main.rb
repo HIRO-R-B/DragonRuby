@@ -197,8 +197,8 @@ class HexagonRotate
   end
 
   def input
-    if inputs.click && !state.rotate_mode
-      tile = state.tiles.find { |t| inputs.click.point_inside_circle? t.center, t.radius }
+    if mouse.click && !state.rotate_mode
+      tile = state.tiles.find { |t| mouse.click.point_inside_circle? t.center, t.radius }
       if tile && tile.a == 127
         points = (0..7).map do |i|
           r = i * Math::PI/3
@@ -217,7 +217,7 @@ class HexagonRotate
         state.selected_tile = tile
       end
     elsif state.rotate_mode
-      if inputs.mouse.button_left &&
+      if mouse.button_left && # Mouse is hovered around selected hexagons
          mouse.point.point_inside_circle?(state.selected_tile.center, state.selected_tile.radius * 3) &&
          !mouse.point.point_inside_circle?(state.selected_tile.center, state.selected_tile.radius)
 
@@ -227,7 +227,7 @@ class HexagonRotate
         state.rot_ini      ||= state.rotation
         state.rot_grab_ini ||= point.angle_to(mouse.point).to_radians
         state.rot_grab_cur   = point.angle_to(mouse.point).to_radians
-        state.rotation       = state.rot_grab_cur - state.rot_grab_ini + state.rot_ini
+        state.rotation       = state.rot_grab_cur - state.rot_grab_ini + state.rot_ini # Rotate hexes from any point of grabbing
         state.force          = 0
       else
         state.rot_grab_ini = nil
@@ -235,7 +235,7 @@ class HexagonRotate
         state.force        = 0.02
       end
 
-      if inputs.mouse.button_right && snapped?(state.rotation, state.snap_angles)
+      if mouse.button_right && snapped?(state.rotation, state.snap_angles)
         tiles  = state.tiles.select { |t| t.a == 255 }
         colors = tiles.map { |t| [t.r, t.g, t.b] }
         tiles.map_with_index  do |t, i|
@@ -253,9 +253,9 @@ class HexagonRotate
   end
 
   def update
-    state.float     = if state.rotate_mode
+    state.float     = if state.rotate_mode # Float hex selection upwards really fast
                         state.float.towards(state.float_max, state.float_speed)
-                      else
+                      else # Or drop instantly
                         0
                       end
     state.rotation  = state.rotation.towards(nearest_angle(state.rotation, state.snap_angles), state.force)
@@ -266,7 +266,7 @@ class HexagonRotate
     outputs.background_color = [0, 0, 0]
 
     bg_tiles = state.tiles.select { |t| t.a == 127 }
-    bg_tiles.each do |t|
+    bg_tiles.each do |t| # Set all hexes to default locations
       point = { x: t.off_x + t.ord_x * t.w,
                 y: t.off_y + t.ord_y * t.h }
       t.x   = point.x
@@ -274,7 +274,7 @@ class HexagonRotate
     end
 
     fg_tiles = state.tiles.select { |t| t.a == 255 }
-    fg_tiles.map do |t|
+    fg_tiles.map do |t| # Set hexes at rotated positions
       tile      = state.selected_tile
       point     = { x: t.off_x + t.ord_x * t.w,
                     y: t.off_y + t.ord_y * t.h }
@@ -284,7 +284,7 @@ class HexagonRotate
       old_angle = Math.atan2(vy, vx)
 
       r = state.rotation
-      va = Math.sin(3 * r).abs
+      va = Math.sin(3 * r).abs # Intersects 0 at every snap angle
       na = nearest_angle(r, state.snap_angles)
       ans = na >= r ? r + (na - r) * va : r + (r - na) * va # Provides the visual SNAP!
       new_angle = old_angle + ans
