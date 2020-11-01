@@ -6,33 +6,6 @@ Slay The Lich
   and strike the final blow
 =end
 
-class Numeric
-  def frame_index *opts
-    frame_count_or_hash, hold_for, repeat, tick_count_override = opts
-    if frame_count_or_hash.is_a? Hash
-      frame_count         = frame_count_or_hash[:count]
-      hold_for            = frame_count_or_hash[:hold_for]
-      repeat              = frame_count_or_hash[:repeat]
-      tick_count_override = frame_count_or_hash[:tick_count_override]
-    else
-      frame_count = frame_count_or_hash
-    end
-
-    tick_count_override ||= Kernel.tick_count
-    animation_frame_count = frame_count
-    animation_frame_hold_time = hold_for
-    animation_length = animation_frame_hold_time * animation_frame_count
-    return nil if Kernel.tick_count < self
-
-    if !repeat && (self + animation_length) < (tick_count_override + 1)
-      return nil
-    else
-      return self.elapsed_time.idiv(animation_frame_hold_time) % animation_frame_count
-    end
-  rescue Exception => e
-  end
-end
-
 class SlayTheLich
   attr_gtk
 
@@ -100,6 +73,17 @@ class SlayTheLich
 
   def ogg(name)
     "sounds/#{name}.ogg"
+  end
+
+  def frame_index(init, count, hold_for, repeat)
+    tick_count = $gtk.args.tick_count
+    length = hold_for * count
+    return nil if tick_count < init
+    if !repeat && (init + length) < (tick_count + 1)
+      return nil
+    else
+      return init.elapsed_time.idiv(hold_for) % count
+    end
   end
 
   def new_combo(size) # Create array of ints, repesents → ↑ ← ↓ etc.
@@ -323,12 +307,11 @@ class SlayTheLich
         shake_value = 15 * smooth_ease * Math.sin(args.tick_count / 2)
 
         @lich.g = 0 # Lich flickers in reddish hue
-        @lich.a = 255 * linear_ease * @win_at.frame_index(2, 2, true)
+        @lich.a = 255 * linear_ease * frame_index(@win_at, 2, 2, true)
 
         # Spam explosions
         if (args.tick_count - @win_at) % 0.2.seconds == 0
-          @orb_exps << Sprite.new(x: 640 - 96 * @scale_x / 2
-                                     + (64 * @scale_x).randomize(:int),
+          @orb_exps << Sprite.new(x: 640 - 96 * @scale_x / 2 + (64 * @scale_x).randomize(:int),
                                   y: 168 + (64 * @scale_y).randomize(:int),
                                   w: 32 * @scale_x,
                                   h: 32 * @scale_y,
@@ -375,11 +358,11 @@ class SlayTheLich
 
     # Shake / Animate
     @background.x = 220 + shake_value
-    @background.path = png("bg_#{0.frame_index(4, 0.5.seconds, true)}")
+    @background.path = png("bg_#{frame_index(0, 4, 0.5.seconds, true)}")
 
     # Floating touches / Animate
     @lich.y = 168 + floating_shift
-    @lich.path = png("lich_#{0.frame_index(2, 0.2.seconds, true)}")
+    @lich.path = png("lich_#{frame_index(0, 2, 0.2.seconds, true)}")
 
     @orbs.each do |orb| # Make orbs circle lich
       t = orb.init_t + args.tick_count / 32
@@ -388,7 +371,7 @@ class SlayTheLich
       shift_x = 200 * x
       shift_y = 50 * y * y * y + floating_shift
 
-      frame = (orb.init_frame + 0.frame_index(5, 0.2.seconds, true)) % 5
+      frame = (orb.init_frame + frame_index(0, 5, 0.2.seconds, true)) % 5
       orb.x = 640 - 32 * @scale_x / 2 + shift_x
       orb.y = 250 + shift_y
       orb.path = png("orb_#{frame}")
@@ -397,7 +380,7 @@ class SlayTheLich
 
     flag = false
     @orb_exps.each do |exp| # Animate / kill off explosions
-      if (frame = exp.init_tick.frame_index(5, 0.1.seconds, false))
+      if (frame = frame_index(exp.init_tick, 5, 0.1.seconds, false))
         exp.path = png("orb_exp_#{frame}")
       else
         exp.live = false
@@ -407,13 +390,13 @@ class SlayTheLich
     @orb_exps.select!(&:live) if flag # Remove the dead
 
     if @slash.live # Animate slash
-      if (frame = @slash.init_tick.frame_index(4, 0.05.seconds, false))
+      if (frame = frame_index(@slash.init_tick, 4, 0.05.seconds, false))
         @slash.x = 640 - 128 * @scale_x / 2 + shake_value
         @slash.path = png("slash_#{frame}")
         @slash.a = 255
 
         @lich.g = 0 # Flicker lich in red
-        @lich.a = 255 * @slash.init_tick.frame_index(2, 2, true)
+        @lich.a = 255 * frame_index(@slash.init_tick, 2, 2, true)
       else
         @slash.live = false
         @slash.a = 0
