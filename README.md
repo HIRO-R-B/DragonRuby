@@ -23,7 +23,7 @@ Even use caps lock `key_down.caps_lock`
 Detect whether caps lock or num lock is activated with `keyboard.caps_lock?` and `keyboard.num_lock?`
 
 ### Convenient Methods
-```
+```ruby
 keyboard.only? key, keys
   # Check if key is the only pressed key in keys
 
