@@ -9,28 +9,48 @@ Put [`draw_order.rb`](draw_order.rb) somewhere and require it!
 ## Features
 ### Alterations
 Change draw order of layers and choose what layers to draw! Try it out like so:
-```
+```ruby
 # Only the sprite and solid layers will be displayed now
 args.outputs.draw_order = [:sprites, :solids] # Sprites first, Solids after
 
 # Set drawing order back to normal
 args.outputs.draw_order = nil
 ```
-
 ### Additions
 You can create an arbitrary amount of layers now!
-Use: `args.outputs.layers[integer_or_symbol]`
+```ruby
+args.outputs.layers[integer_or_symbol]
 ```
-# Use them like primitive layers
-args.outputs.layers[:waffles] << [0, 0, 100, 100, 'waffle.png'].sprite
-args.outputs.layers[0] << [100, 0, 100, 100, 'dragonruby.png'].sprite
+#### Notes
+Use them like `outputs.primitives`
+```ruby
+args.outputs.layers[0] << [0, 0, 20, 20].solid
 ```
-
-You even have access to static layers!
+Indexed layers are always drawn in order (You can even skip indexes)
+```ruby
+args.outputs.layers[2] << [0, 0, 100, 100].solid                    # Drawn second
+args.outputs.layers[0] << [0, 0, 100, 100, 'dragonruby.png'].sprite # Drawn first
+# Just displays a black square
 ```
-args.outputs.static_layers[:pancakes] << [0, 0, 1280, 720].solid
+Named layers are drawn in the order they're created
+```ruby
+args.outputs.layers[:pancakes] << [0, 0, 1280, 720].solid               # This layer's drawn first
+args.outputs.layers[:waffles]  << [0, 0, 100, 100, 'waffle.png'].sprite # This layer's drawn second
+args.outputs.layers[:pancakes] << [0, 640, 640, 720].solid              # This is drawn between the first two
 ```
-
-Notes: layers
+However, Indexed layers will be drawn before Named layers
+### More Additions
+You're not limited to just extra layers! Enjoy static layers too!
+```ruby
+args.outputs.static_layers[:ahhh] << [0, 0, 1280, 720].solid
+args.outputs.layers[:nooo] << [0, 0, 100, 100, 'dragonruby.png].sprite
+# Just a black screen, statics are drawn after their normal counterparts
+```
+## Mix and Match
+You can change the draw order of the extra layers too of course!
+```ruby
+# Use it like so
+args.outputs.draw_order = [:layers_apple, :layers_0, :static_layers_banana, ...]
+```
 
 Requires version: 1.26
