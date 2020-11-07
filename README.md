@@ -38,7 +38,7 @@ args.outputs.layers[:pancakes] << [0, 0, 1280, 720].solid               # This l
 args.outputs.layers[:waffles]  << [0, 0, 100, 100, 'waffle.png'].sprite # This layer's drawn second
 args.outputs.layers[:pancakes] << [0, 640, 640, 720].solid              # This is drawn between the first two
 ```
-However, Indexed layers will be drawn before Named layers
+**However, Indexed layers are drawn before Named layers**
 ### More Additions
 You're not limited to just extra layers! Enjoy static layers too!
 ```ruby
