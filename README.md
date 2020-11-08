@@ -1,6 +1,7 @@
 # Draw Order
 Alters outputs and related classes so that you can change layer ordering and create arbitrary layers
 
+Requires version: 1.26
 ## How to?
 Put [`draw_order.rb`](draw_order.rb) somewhere and require it!
 
@@ -20,6 +21,10 @@ args.outputs.draw_order = nil
 You can create an arbitrary amount of layers now!
 ```ruby
 args.outputs.layers[integer_or_symbol]
+```
+You can delete them as easily too
+```ruby
+args.outputs.layers.delete(:bad_layer)
 ```
 #### Notes
 Use them like `outputs.primitives`
@@ -46,11 +51,6 @@ args.outputs.static_layers[:ahhh] << [0, 0, 1280, 720].solid
 args.outputs.layers[:nooo] << [0, 0, 100, 100, 'dragonruby.png].sprite
 # Just a black screen, statics are drawn after their normal counterparts
 ```
-
-Added a layer by mistake? Or just want one gone?
-```ruby
-args.outputs.layers.delete(:bad_layer)
-```
 ## Mix and Match
 You can change the draw order of the extra layers too of course!
 ```ruby
@@ -58,4 +58,4 @@ You can change the draw order of the extra layers too of course!
 args.outputs.draw_order = [:layers_apple, :layers_0, :static_layers_banana, ...]
 ```
 
-Requires version: 1.26
+
