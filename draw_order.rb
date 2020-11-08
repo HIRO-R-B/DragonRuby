@@ -21,6 +21,20 @@ module GTK
           return @layers[arg.to_sym] = FlatArray.new(arg.to_sym, :mark_assert!, $gtk.args.outputs.outputs_with_ids)
         end
       end
+      
+      def delete arg
+        if arg.is_a? Integer
+          if @int_keys.include? arg
+            @int_keys.delete arg
+            @layers.delete arg
+          end
+        else
+          if @sym_keys.include? arg.to_sym
+            @sym_keys.delete arg.to_sym
+            @layers.delete arg.to_sym
+          end
+        end
+      end
 
       def clear
         idx = 0
