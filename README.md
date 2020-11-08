@@ -46,6 +46,11 @@ args.outputs.static_layers[:ahhh] << [0, 0, 1280, 720].solid
 args.outputs.layers[:nooo] << [0, 0, 100, 100, 'dragonruby.png].sprite
 # Just a black screen, statics are drawn after their normal counterparts
 ```
+
+Added a layer by mistake? Or just want one gone?
+```ruby
+args.outputs.layers.delete(:bad_layer)
+```
 ## Mix and Match
 You can change the draw order of the extra layers too of course!
 ```ruby
