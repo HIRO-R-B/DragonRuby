@@ -13,6 +13,7 @@ Change draw order of layers and choose what layers to draw! Try it out like so:
 ```ruby
 # Only the sprite and solid layers will be displayed now
 args.outputs.draw_order = [:sprites, :solids] # Sprites first, Solids after
+                          # Only symbols allowed here
 
 # Set drawing order back to normal
 args.outputs.draw_order = nil
@@ -20,7 +21,7 @@ args.outputs.draw_order = nil
 ### Additions
 You can create an arbitrary amount of layers now!
 ```ruby
-args.outputs.layers[integer_or_symbol]
+args.outputs.layers[integer_or_symbol_only]
 ```
 You can delete them as easily too
 ```ruby
@@ -43,7 +44,7 @@ args.outputs.layers[:pancakes] << [0, 0, 1280, 720].solid               # This l
 args.outputs.layers[:waffles]  << [0, 0, 100, 100, 'waffle.png'].sprite # This layer's drawn second
 args.outputs.layers[:pancakes] << [0, 640, 640, 720].solid              # This is drawn between the first two
 ```
-**However, Indexed layers are drawn before Named layers**
+**However, Indexed layers are drawn before Named layers by default**
 ### More Additions
 You're not limited to just extra layers! Enjoy static layers too!
 ```ruby
@@ -52,10 +53,16 @@ args.outputs.layers[:nooo] << [0, 0, 100, 100, 'dragonruby.png].sprite
 # Just a black screen, statics are drawn after their normal counterparts
 ```
 ## Mix and Match
-You can change the draw order of the extra layers too of course!
+You can change the draw order to include the extra layers too of course!
 ```ruby
 # Use it like so
 args.outputs.draw_order = [:layers_apple, :layers_0, :static_layers_banana, ...]
+# You can even create new layers through this method, but be careful with that
+```
+You can also set the draw order of the extra layers themselves too!
+```ruby
+args.outputs.layers.draw_order = [1, :apple, 2, :banana]
+args.outputs.static_layers.draw_order = [3, 2, 1]
 ```
 
 
