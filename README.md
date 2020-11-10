@@ -1,4 +1,4 @@
-# Just Stuff
+# Just Fun Stuff
 Lunar Lander Minigame in 554 Chars
 ```ruby
 def tick a
