@@ -1,5 +1,5 @@
 # Just Fun Stuff
-Lunar Lander Minigame in 554 Chars
+Lunar Lander Minigame in 554 Chars (v:1.26)
 ```ruby
 def tick a
 (w=24;h=300;$l=p
