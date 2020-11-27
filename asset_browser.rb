@@ -79,7 +79,7 @@ module GTK
     end
 
     def ls path
-      return `cmd /c "dir /b"`.split("\n") if $gtk.platform == 'Windows'
+      return `cmd /c "dir /b \"#{path}\""`.split("\r\n") if $gtk.platform == 'Windows'
       return `ls \"#{path}\"`.split("\n") if $gtk.platform == 'Linux' or $gtk.platform == 'Mac Os X'
     end
 
