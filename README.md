@@ -3,6 +3,9 @@ Currently being worked on, expect breaking things
 In order to get png dimensions, I use Dimensions  
 Checkout the [source](https://github.com/sstephenson/dimensions) for Dimensions
 
+## Requirements
+You must have `xclip` if you're on Linux and you want clipboard functionality
+
 ## How To:
 Put both [asset_browser.rb](asset_browswer.rb) and [dimensions.rb](dimensions.rb) in your 'mygame' folder inside a 'lib' folder  
 and require like so:
