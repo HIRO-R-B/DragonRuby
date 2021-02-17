@@ -10,6 +10,8 @@ and require like so:
 require 'lib/asset_browser.rb'
 ```
 
+Activate using `shift + 1` (Exclamation)
+
 ## Keybinds:
 ```
 w - Fast Up
