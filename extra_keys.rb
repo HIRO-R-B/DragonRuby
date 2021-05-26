@@ -17,6 +17,9 @@ module GTK
                         raw_key == 1073741906 || # Arrow Up
                         raw_key == 1073741899 || # Page Up
                         raw_key == 1073741902 || # Page Down
+                        raw_key == 1073741897 || # Insert
+                        raw_key == 1073741898 || # Home
+                        raw_key == 1073741901 || # End
                         (raw_key >= 1073742048 && raw_key <= 1073742055) || # Modifier Keys
                         (raw_key >= 1073741907 && raw_key <= 1073741923) || # Num Keys
                         (raw_key >= 1073741881 && raw_key <= 1073741893)#|| # Caps Lock & Function Keys
@@ -116,6 +119,9 @@ module GTK
         1073741906 => [:up],
         1073741899 => [:pageup],
         1073741902 => [:pagedown],
+        1073741897 => [:insert],
+        1073741898 => [:home],
+        1073741901 => [:end],
         127 => [:delete],
         1073742049 => [:lshift, :shift],
         1073742053 => [:rshift, :shift],
