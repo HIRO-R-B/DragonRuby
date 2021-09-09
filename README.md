@@ -5,7 +5,9 @@ Everything's under MIT License, feel free to use.
 # Spacemacs Layer!
 So far, only has a `company-dragonruby` package
 
-Should work if you activate `company-mode`
+By default `company-dragonruby` is off
+
+`M-x company-dragonruby-on` to activate it
 
 # Install
 Add the `dragonruby` folder to `.emacs.d/private`
