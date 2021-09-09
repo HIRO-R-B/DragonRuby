@@ -4,6 +4,7 @@
 (require 'request)
 
 (defvar company-dragonruby--callback nil)
+(defvar company-dragonruby--activated nil)
 
 (defun company-dragonruby-get-code ()
   (format "
@@ -24,10 +25,6 @@ end
     (save-restriction (widen)
                       (buffer-substring-no-properties (point-min) (point-max)))))
 
-(defun company-dragonruby-candidates ()
-  "Gets completions candidates"
-  (split-string (company-dragonruby-post) "\n"))
-
 (defun company-dragonruby-async-post ()
   (request "http://localhost:9001/dragon/eval/"
     :type "POST"
@@ -37,19 +34,35 @@ end
     :success (cl-function
               (lambda (&key data &allow-other-keys)
                 (let ((candidates (split-string (format "%s" data) "\n")))
-                  (funcall company-dragonruby--callback candidates))))))
+                  (funcall company-dragonruby--callback candidates))))
+    :error (cl-function
+            (lambda (&rest args &key error-thrown &allow-other-keys)
+              (message "Is DragonRuby open?")))))
 
 (defun company-dragonruby-find-candidates ()
   "Get completion candidates"
   (company-dragonruby-async-post))
 
 ;;;###autoload
+(defun company-dragonruby-on ()
+  "Turns on company-dragonruby completions"
+  (interactive)
+  (setq company-dragonruby--activated t))
+
+;;;###autoload
+(defun company-dragonruby-off ()
+  "Turns off company-dragonruby completions"
+  (interactive)
+  (setq company-dragonruby--activated nil))
+
+;;;###autoload
 (defun company-dragonruby (command &optional arg &rest _args)
-  "Dragonruby backend for company-mode"
+  "Dragonruby backend for company-mode. By default it's off"
   (interactive (list 'interactive))
   (cl-case command
     (interactive (company-begin-backend 'company-dragonruby))
-    (prefix (company-grab-symbol-cons "\\." 1))
+    (prefix (when company-dragonruby--activated
+             (company-grab-symbol-cons "\\." 1)))
     (candidates (cons :async
                       (lambda (callback)
                         (setq company-dragonruby--callback callback)
